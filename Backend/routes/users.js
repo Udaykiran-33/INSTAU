@@ -287,4 +287,45 @@ router.get('/feed/suggestions', protect, async (req, res) => {
   }
 });
 
+// @route   GET /api/users/search/query
+// @desc    Search users by username or name
+// @access  Public
+router.get('/search/query', async (req, res) => {
+  try {
+    const { q } = req.query;
+    
+    if (!q || q.trim().length === 0) {
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
+
+    const searchRegex = new RegExp(q.trim(), 'i');
+    
+    const users = await User.find({
+      $or: [
+        { username: searchRegex },
+        { name: searchRegex }
+      ]
+    })
+    .select('username avatar name bio verified followers')
+    .limit(20);
+
+    res.json({
+      success: true,
+      data: users.map(user => ({
+        ...user.toObject(),
+        followersCount: user.followers?.length || 0
+      }))
+    });
+  } catch (error) {
+    console.error('Search error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
 module.exports = router;
